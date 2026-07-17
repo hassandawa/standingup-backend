@@ -15,6 +15,7 @@ client = MongoClient(
     connectTimeoutMS=5000,
     tls=True,
     tlsCAFile=certifi.where(),
+    tlsDisableOCSPEndpointCheck=True,
 )
 db = client[DATABASE_NAME]
 
