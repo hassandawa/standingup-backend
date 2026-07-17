@@ -1,9 +1,9 @@
-import os
+﻿import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 DATABASE_NAME = os.getenv("DATABASE_NAME", "startingup")
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -23,6 +23,9 @@ MAILJET_API_KEY = os.getenv("MAILJET_API_KEY", "")
 MAILJET_SECRET_KEY = os.getenv("MAILJET_SECRET_KEY", "")
 MAILJET_FROM = os.getenv("MAILJET_FROM", SMTP_FROM)
 MAILJET_FROM_NAME = os.getenv("MAILJET_FROM_NAME", "startingUP")
+
+if not DATABASE_URL:
+    raise EnvironmentError("DATABASE_URL is not set. Add your Neon/Postgres connection string.")
 
 if AI_PROVIDER not in {"gemini", "groq"}:
     raise EnvironmentError("AI_PROVIDER must be either 'gemini' or 'groq'.")
