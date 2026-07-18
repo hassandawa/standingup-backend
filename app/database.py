@@ -1,4 +1,4 @@
-﻿"""
+"""
 Postgres/Neon-backed storage layer that mimics the subset of pymongo's
 Collection API this app actually uses (find_one, find, insert_one,
 update_one with $set/$push/$pull, delete_one/many, count_documents,
@@ -76,6 +76,11 @@ def _match_one(doc, key, cond):
             if op == "$lt" and not (actual is not None and actual < val):
                 return False
         return True
+    # MongoDB-style implicit array containment: if the stored field is a
+    # list and the query value is a plain scalar, match when the scalar
+    # appears anywhere in the list (e.g. find_one({"tokens": token})).
+    if isinstance(actual, list) and not isinstance(cond, list):
+        return cond in actual
     return actual == cond
 
 
