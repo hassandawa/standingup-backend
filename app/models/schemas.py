@@ -55,6 +55,9 @@ class UserResponse(BaseModel):
     name: str
     email: str
     created_at: datetime
+    plan: str = "free"
+    ideas_generated_count: int = 0
+    subscription_status: str | None = None
 
 
 class AuthResponse(BaseModel):

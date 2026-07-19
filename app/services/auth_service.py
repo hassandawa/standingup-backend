@@ -46,6 +46,9 @@ def _public_user(doc: dict) -> dict:
         "name": doc["name"],
         "email": doc["email"],
         "created_at": doc["created_at"],
+        "plan": doc.get("plan", "free"),
+        "ideas_generated_count": doc.get("ideas_generated_count", 0),
+        "subscription_status": doc.get("subscription_status"),
     }
 
 
@@ -67,6 +70,10 @@ def create_user(name: str, email: str, password: str) -> dict:
         "password_salt": salt,
         "password_hash": password_hash,
         "tokens": [token],
+        "plan": "free",
+        "ideas_generated_count": 0,
+        "flutterwave_subscription_id": None,
+        "subscription_status": None,
         "created_at": now,
         "updated_at": now,
     }
@@ -170,6 +177,63 @@ def get_user_by_id(user_id: str) -> dict | None:
     return _public_user(user) if user else None
 
 
+FREE_PLAN_IDEA_LIMIT = 1
+
+
+def check_and_increment_idea_usage(user_id: str) -> None:
+    """Raise AuthError if a free-plan user has hit their idea generation
+    limit; otherwise increment their usage counter. Paid plans are
+    unlimited. Called right before generating ideas for a signed-in user."""
+    try:
+        user = users.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+        return
+    if not user:
+        return
+    plan = user.get("plan", "free")
+    if plan != "free":
+        return
+    count = user.get("ideas_generated_count", 0)
+    if count >= FREE_PLAN_IDEA_LIMIT:
+        raise AuthError(
+            f"Free plan is limited to {FREE_PLAN_IDEA_LIMIT} idea generation. "
+            "Upgrade to Pro or Team for unlimited ideas."
+        )
+    users.update_one({"_id": user["_id"]}, {"$set": {"ideas_generated_count": count + 1}})
+
+
+def get_user_by_email_raw(email: str) -> dict | None:
+    """Raw doc (not _public_user) — used by webhook handling to locate a
+    user by their account email, since Flutterwave's recurring charges
+    don't reliably echo back our original tx_ref."""
+    try:
+        clean_email = _normalize_email(email)
+    except AuthError:
+        return None
+    return users.find_one({"email": clean_email})
+
+
+def set_subscription_id(user_id: str, subscription_id: str) -> None:
+    try:
+        users.update_one({"_id": ObjectId(user_id)}, {"$set": {"flutterwave_subscription_id": subscription_id}})
+    except Exception:
+        pass
+
+
+def update_subscription_status(user_id: str, plan: str, status: str, subscription_id: str | None = None) -> None:
+    """Called by the Flutterwave webhook handler (or the redirect-back
+    verification step) to sync a user's plan/status."""
+    try:
+        updates = {
+            "plan": plan,
+            "subscription_status": status,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if subscription_id is not None:
+            updates["flutterwave_subscription_id"] = subscription_id
+        users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+    except Exception:
+        pass
 def logout_user(token: str) -> bool:
     if not token:
         return False

@@ -9,7 +9,7 @@ from app.models.schemas import (
 )
 from app.services.ai_service import generate_startup_ideas, generate_full_plan
 from app.services.ai_errors import AIServiceError, AIRateLimitError
-from app.services.auth_service import get_user_by_token
+from app.services.auth_service import get_user_by_token, check_and_increment_idea_usage, AuthError
 from app.services.database_service import (
     save_startup_plan,
     get_saved_plans,
@@ -37,7 +37,12 @@ def require_user_id(authorization: str = Header(default="")) -> str:
 
 
 @router.post("/api/startups/generate", response_model=StartupIdeasResponse)
-async def generate_ideas(profile: UserProfile):
+async def generate_ideas(profile: UserProfile, user_id: str | None = Depends(optional_user_id)):
+    if user_id:
+        try:
+            check_and_increment_idea_usage(user_id)
+        except AuthError as exc:
+            raise HTTPException(status_code=402, detail=str(exc))
     try:
         result = await generate_startup_ideas(profile.model_dump())
     except AIRateLimitError:
