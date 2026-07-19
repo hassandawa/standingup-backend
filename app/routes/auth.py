@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, Header, HTTPException
 
+from app.config import FRONTEND_URL
 from app.models.schemas import AuthResponse, ForgotPasswordRequest, SignInRequest, SignUpRequest, UserResponse
 from app.services.auth_service import (
     AuthError,
@@ -14,6 +15,7 @@ from app.services.auth_service import (
     verify_reset_token,
     reset_password,
 )
+from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +47,19 @@ def signin(payload: SignInRequest):
 
 
 @router.post("/forgot-password")
-def forgot_password(payload: ForgotPasswordRequest):
+async def forgot_password(payload: ForgotPasswordRequest):
     try:
-        request_password_reset(payload.email)
+        token = request_password_reset(payload.email)
+        if token:
+            reset_url = f"{FRONTEND_URL.rstrip('/')}/reset-password?token={token}"
+            html_body = f"""
+                <p>We received a request to reset your startingUP password.</p>
+                <p><a href="{reset_url}">Click here to reset your password</a></p>
+                <p>This link expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
+            """
+            sent, reason = await send_email(payload.email, "Reset your startingUP password", html_body)
+            if not sent:
+                logger.warning("Password reset email not sent to %s: %s", payload.email, reason)
     except AuthError:
         pass
     except Exception as exc:
