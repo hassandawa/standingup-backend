@@ -50,6 +50,13 @@ class ForgotPasswordRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=254)
 
 
+class ContactRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    email: str = Field(..., min_length=3, max_length=254)
+    subject: str = Field(default="", max_length=150)
+    message: str = Field(..., min_length=1, max_length=5000)
+
+
 class UserResponse(BaseModel):
     id: str
     name: str

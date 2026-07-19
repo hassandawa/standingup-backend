@@ -371,6 +371,7 @@ comments = Collection("comments")
 users = Collection("users")
 saved_ideas = Collection("saved_ideas")
 password_resets = Collection("password_resets")
+contact_messages = Collection("contact_messages")
 
 
 def ensure_indexes():
