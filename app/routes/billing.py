@@ -54,7 +54,11 @@ def start_checkout(body: dict, authorization: str = Header(default="")):
         )
         return {"url": url}
     except FlutterwaveNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        logger.error("Checkout attempted while Flutterwave is not configured: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Online payments aren't available just yet. Send us a quick message below and we'll set you up manually.",
+        )
     except Exception as exc:
         logger.error("Failed to create Flutterwave checkout: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to start checkout. Please try again.")
