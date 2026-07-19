@@ -117,7 +117,10 @@ def verify_reset_token(token: str) -> dict:
     doc = password_resets.find_one({"token": token})
     if not doc:
         raise AuthError("Invalid or expired reset token.")
-    if doc["expires_at"] < datetime.now(timezone.utc):
+    expires_at = doc["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
         password_resets.delete_one({"_id": doc["_id"]})
         raise AuthError("Reset token has expired. Please request a new one.")
     return {"email": doc["email"], "token": token}
@@ -131,7 +134,10 @@ def reset_password(token: str, new_password: str) -> bool:
     doc = password_resets.find_one({"token": token})
     if not doc:
         raise AuthError("Invalid or expired reset token.")
-    if doc["expires_at"] < datetime.now(timezone.utc):
+    expires_at = doc["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
         password_resets.delete_one({"_id": doc["_id"]})
         raise AuthError("Reset token has expired. Please request a new one.")
     salt, password_hash = _hash_password(new_password)
