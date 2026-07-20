@@ -38,7 +38,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import asyncio
 
 from app.database import client, db, ensure_indexes
-from app.routes import auth, profile, startups, enhanced, saved_ideas, billing, contact
+from app.routes import auth, profile, startups, enhanced, saved_ideas, billing, contact, admin
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +110,7 @@ app.include_router(enhanced.router)
 app.include_router(saved_ideas.router)
 app.include_router(billing.router)
 app.include_router(contact.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
