@@ -243,6 +243,25 @@ def update_subscription_status(user_id: str, plan: str, status: str, subscriptio
         pass
 
 
+def admin_set_plan(user_id: str, plan: str, days: int | None) -> None:
+    """Manually set a user's plan from the admin dashboard. Unlike the
+    webhook-driven update_subscription_status, this lets an admin choose a
+    custom expiry window (or none at all, for a permanent grant) — useful
+    for onboarding someone who paid outside the automated flow."""
+    updates = {
+        "plan": plan,
+        "subscription_status": "active" if plan != "free" else None,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    if plan == "free":
+        updates["plan_expires_at"] = None
+    elif days is not None:
+        updates["plan_expires_at"] = datetime.now(timezone.utc) + timedelta(days=days)
+    else:
+        updates["plan_expires_at"] = None  # no expiry = permanent grant
+    users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+
+
 def logout_user(token: str) -> bool:
     if not token:
         return False

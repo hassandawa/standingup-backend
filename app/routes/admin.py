@@ -20,7 +20,7 @@ from app.database import (
     startup_plans,
     users,
 )
-from app.services.auth_service import get_user_by_token
+from app.services.auth_service import get_user_by_token, admin_set_plan
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,26 @@ def list_users(authorization: str = Header(default="")):
         reverse=True,
     )
     return {"users": result, "total": len(result)}
+
+
+@router.post("/users/{user_id}/set-plan")
+def set_user_plan(user_id: str, body: dict, authorization: str = Header(default="")):
+    require_admin(authorization)
+    plan = (body or {}).get("plan", "")
+    if plan not in ("free", "pro", "team"):
+        raise HTTPException(status_code=400, detail="plan must be 'free', 'pro', or 'team'.")
+    days = (body or {}).get("days")
+    if days is not None:
+        try:
+            days = int(days)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="days must be a whole number.")
+    try:
+        admin_set_plan(user_id, plan, days)
+    except Exception as exc:
+        logger.error("Failed to set plan for %s: %s", user_id, exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update plan.")
+    return {"message": f"Plan updated to {plan}."}
 
 
 @router.get("/users/{user_id}/activity")
