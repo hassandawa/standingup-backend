@@ -43,7 +43,10 @@ if (-not (Test-Path $downloadPath)) {
 $before = if (Test-Path $DestPath) { Get-Content $DestPath -Raw } else { "" }
 
 # 4. Copy into place
-New-Item -ItemType Directory -Force -Path (Split-Path $DestPath -Parent) | Out-Null
+$destDir = Split-Path $DestPath -Parent
+if ($destDir) {
+    New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+}
 Copy-Item $downloadPath -Destination $DestPath -Force
 Write-Host "Copied $DownloadName -> $DestPath" -ForegroundColor Green
 
