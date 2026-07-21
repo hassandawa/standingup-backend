@@ -612,9 +612,10 @@ async def save_customer_strategy(body: dict, user_id: str = Depends(_require_use
         track_event("save_customer_strategy", {"user_id": user_id})
         strategy = body.get("strategy", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not strategy:
             raise HTTPException(status_code=400, detail="Strategy data is required.")
-        strategy_id = db_save_customer_strategy(strategy, idea_context, user_id=user_id)
+        strategy_id = db_save_customer_strategy(strategy, idea_context, idea_id=idea_id, user_id=user_id)
         return {"strategy_id": strategy_id, "message": "Customer strategy saved successfully."}
     except HTTPException:
         raise
@@ -654,9 +655,10 @@ async def save_decision_report(body: dict, user_id: str = Depends(_require_user_
         track_event("save_decision_report", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = db_save_decision_report(report, idea_context, user_id=user_id)
+        report_id = db_save_decision_report(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Decision report saved successfully."}
     except HTTPException:
         raise
@@ -696,9 +698,10 @@ async def save_business_plan_endpoint(body: dict, user_id: str = Depends(_requir
         track_event("save_business_plan", {"user_id": user_id})
         plan = body.get("plan", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not plan:
             raise HTTPException(status_code=400, detail="Plan data is required.")
-        plan_id = save_business_plan(plan, idea_context, user_id=user_id)
+        plan_id = save_business_plan(plan, idea_context, idea_id=idea_id, user_id=user_id)
         return {"plan_id": plan_id, "message": "Business plan saved successfully."}
     except HTTPException:
         raise
@@ -737,9 +740,10 @@ async def save_customer_insights_endpoint(body: dict, user_id: str = Depends(_re
         track_event("save_customer_insights", {"user_id": user_id})
         insights = body.get("insights", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not insights:
             raise HTTPException(status_code=400, detail="Insights data is required.")
-        insights_id = save_customer_insights(insights, idea_context, user_id=user_id)
+        insights_id = save_customer_insights(insights, idea_context, idea_id=idea_id, user_id=user_id)
         return {"insights_id": insights_id, "message": "Customer insights saved successfully."}
     except HTTPException:
         raise
@@ -804,9 +808,10 @@ async def save_market_intelligence_endpoint(body: dict, user_id: str = Depends(_
         track_event("save_market_intelligence", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_market_intelligence(report, idea_context, user_id=user_id)
+        report_id = save_market_intelligence(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Market intelligence report saved successfully."}
     except HTTPException:
         raise
@@ -932,9 +937,10 @@ async def save_investor_tools_endpoint(body: dict, user_id: str = Depends(_requi
         track_event("save_investor_tools", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_investor_tools(report, idea_context, user_id=user_id)
+        report_id = save_investor_tools(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Investor tools saved successfully."}
     except HTTPException:
         raise
@@ -999,9 +1005,10 @@ async def save_marketing_hub_endpoint(body: dict, user_id: str = Depends(_requir
         track_event("save_marketing_hub", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_marketing_hub(report, idea_context, user_id=user_id)
+        report_id = save_marketing_hub(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Marketing assets saved successfully."}
     except HTTPException:
         raise
@@ -1065,9 +1072,10 @@ async def save_development_hub_endpoint(
     try:
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_development_hub(report, idea_context, user_id=user_id)
+        report_id = save_development_hub(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Development hub saved to dashboard."}
     except HTTPException:
         raise
@@ -1131,9 +1139,10 @@ async def save_growth_hub_endpoint(
     try:
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_growth_hub(report, idea_context, user_id=user_id)
+        report_id = save_growth_hub(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Growth hub saved to dashboard."}
     except HTTPException:
         raise
@@ -1197,9 +1206,10 @@ async def save_financial_plan_endpoint(
     try:
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_financial_plan(report, idea_context, user_id=user_id)
+        report_id = save_financial_plan(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Financial plan saved to dashboard."}
     except HTTPException:
         raise
@@ -1322,9 +1332,10 @@ async def save_launch_hub_endpoint(body: dict, user_id: str = Depends(_require_u
         report = body.get("report", {})
         checked_items = body.get("checked_items", [])
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_launch_hub(report, checked_items, idea_context, user_id=user_id)
+        report_id = save_launch_hub(report, checked_items, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Launch hub saved to dashboard."}
     except HTTPException:
         raise
@@ -1378,10 +1389,17 @@ async def remove_launch_hub(report_id: str, user_id: str = Depends(_require_user
 async def create_team_endpoint(body: TeamCreateRequest, user_id: str = Depends(_require_user_id)):
     try:
         user = get_user_by_id(user_id)
+        if not user or user.get("plan") != "team":
+            raise HTTPException(
+                status_code=402,
+                detail="Creating a team requires the Team plan. Upgrade to invite collaborators.",
+            )
         email = user.get("email", "") if user else ""
         name = user.get("name", "") if user else ""
         team = create_team(body.name, body.description, user_id, email, name)
         return team
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Create team failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create team.")

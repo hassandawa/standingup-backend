@@ -159,10 +159,11 @@ def delete_startup_plan(plan_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_customer_strategy(strategy: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_customer_strategy(strategy: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "strategy": strategy,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -176,10 +177,11 @@ def get_customer_strategies(user_id: str | None = None) -> list:
     return [serialize_doc(d) for d in docs]
 
 
-def save_decision_report(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_decision_report(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -206,10 +208,11 @@ def delete_decision_report(report_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_business_plan(plan: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_business_plan(plan: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "plan": plan,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -236,10 +239,11 @@ def delete_business_plan(plan_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_customer_insights(insights: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_customer_insights(insights: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "insights": insights,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -279,10 +283,11 @@ def delete_customer_strategy(strategy_id: str, user_id: str | None = None) -> bo
     return result.deleted_count > 0
 
 
-def save_market_intelligence(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_market_intelligence(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -341,10 +346,11 @@ def delete_ai_cofounder_chat(chat_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_investor_tools(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_investor_tools(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -371,10 +377,11 @@ def delete_investor_tools(report_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_marketing_hub(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_marketing_hub(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -403,10 +410,11 @@ def delete_marketing_hub(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Development Hub ──────────────────────────────────────────────────────────
 
-def save_development_hub(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_development_hub(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -434,10 +442,11 @@ def delete_development_hub(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Growth Hub ───────────────────────────────────────────────────────────────
 
-def save_growth_hub(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_growth_hub(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -465,10 +474,11 @@ def delete_growth_hub(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Financial Planning Hub ───────────────────────────────────────────────────
 
-def save_financial_plan(report: dict, idea_context: dict, user_id: str | None = None) -> str:
+def save_financial_plan(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -496,11 +506,12 @@ def delete_financial_plan(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Launch Hub ───────────────────────────────────────────────────────────────
 
-def save_launch_hub(report: dict, checked_items: list[str] | None = None, idea_context: dict | None = None, user_id: str | None = None) -> str:
+def save_launch_hub(report: dict, checked_items: list[str] | None = None, idea_context: dict | None = None, idea_id: str | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "checked_items": checked_items or [],
         "idea_context": idea_context or {},
+        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -720,10 +731,36 @@ def update_saved_idea_hub_reports(idea_id: str, user_id: str, hub_key: str, repo
     return result.modified_count > 0
 
 
+# Collections that can hold analyses/reports linked to a specific saved
+# idea via an "idea_id" field, populated when that report was generated
+# while a saved idea was selected. Swept on delete_saved_idea so removing
+# an idea also removes its analysis history, not just the idea itself.
+_IDEA_LINKED_COLLECTIONS = [
+    customer_strategies,
+    decision_reports,
+    business_plans,
+    customer_insights,
+    market_intelligence,
+    investor_tools,
+    marketing_hub,
+    development_hubs,
+    growth_hubs,
+    financial_plans,
+    launch_hubs,
+]
+
+
 def delete_saved_idea(idea_id: str, user_id: str) -> bool:
     try:
         obj_id = ObjectId(idea_id)
     except (bson_errors.InvalidId, TypeError):
         return False
     result = saved_ideas.delete_one({"_id": obj_id, "user_id": user_id})
-    return result.deleted_count > 0
+    deleted = result.deleted_count > 0
+    if deleted:
+        for collection in _IDEA_LINKED_COLLECTIONS:
+            try:
+                collection.delete_many({"idea_id": idea_id, "user_id": user_id})
+            except Exception as e:
+                logger.warning("Cascade delete failed for %s on idea %s: %s", collection.name, idea_id, e)
+    return deleted
