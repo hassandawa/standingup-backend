@@ -1416,6 +1416,15 @@ class TeamAddAnalysisRequest(BaseModel):
     title: str = ""
 
 
+class TeamAcceptInviteRequest(BaseModel):
+    token: str = ""
+
+
+class TeamRemoveMemberRequest(BaseModel):
+    team_id: str = ""
+    member_user_id: str = ""
+
+
 class CommentCreateRequest(BaseModel):
     target_type: str = ""
     target_id: str = ""

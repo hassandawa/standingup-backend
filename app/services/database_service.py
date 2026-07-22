@@ -587,6 +587,10 @@ def get_team_by_invite_code(code: str) -> dict | None:
     return None
 
 
+# Team plan member cap (owner + invited members). Adjust here if pricing changes.
+TEAM_MEMBER_LIMIT = 5
+
+
 def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | None:
     team = teams.find_one({"invite_code": invite_code})
     if not team:
@@ -594,6 +598,8 @@ def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | N
     already_member = any(m.get("user_id") == user_id for m in team.get("members", []))
     if already_member:
         return {"_id": str(team["_id"]), "already_member": True}
+    if len(team.get("members", [])) >= TEAM_MEMBER_LIMIT:
+        return {"_id": str(team["_id"]), "limit_reached": True}
     new_member = {"user_id": user_id, "email": email, "name": name, "role": "viewer", "joined_at": datetime.now(timezone.utc).isoformat()}
     teams.update_one({"_id": team["_id"]}, {"$push": {"members": new_member}})
     team["members"].append(new_member)
@@ -601,6 +607,76 @@ def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | N
     team["id"] = str(team["_id"])
     team["created_at"] = team["created_at"].isoformat() if hasattr(team["created_at"], "isoformat") else str(team["created_at"])
     return team
+
+
+def create_team_invite(team_id: str, email: str, invited_by: str) -> dict:
+    token = secrets.token_urlsafe(24)
+    doc = {
+        "team_id": team_id,
+        "email": email.strip().lower(),
+        "token": token,
+        "status": "pending",
+        "invited_by": invited_by,
+        "created_at": datetime.now(timezone.utc),
+    }
+    team_invites.insert_one(doc)
+    return doc
+
+
+def get_pending_invites(team_id: str) -> list:
+    docs = list(team_invites.find({"team_id": team_id, "status": "pending"}).sort("created_at", -1))
+    for d in docs:
+        d["_id"] = str(d["_id"])
+        d["created_at"] = d["created_at"].isoformat() if hasattr(d["created_at"], "isoformat") else str(d["created_at"])
+    return docs
+
+
+def revoke_team_invite(team_id: str, invite_id: str) -> bool:
+    try:
+        obj_id = ObjectId(invite_id)
+    except (bson_errors.InvalidId, TypeError):
+        return False
+    result = team_invites.delete_one({"_id": obj_id, "team_id": team_id})
+    return result.deleted_count > 0
+
+
+def accept_team_invite(token: str, user_id: str, email: str, name: str) -> dict:
+    invite = team_invites.find_one({"token": token, "status": "pending"})
+    if not invite:
+        return {"error": "Invite not found or already used."}
+    if invite["email"] != email.strip().lower():
+        return {"error": "This invite was sent to a different email address."}
+    team = teams.find_one({"_id": ObjectId(invite["team_id"])})
+    if not team:
+        return {"error": "Team no longer exists."}
+    already_member = any(m.get("user_id") == user_id for m in team.get("members", []))
+    if not already_member:
+        if len(team.get("members", [])) >= TEAM_MEMBER_LIMIT:
+            return {"error": f"This team has reached its {TEAM_MEMBER_LIMIT}-member limit."}
+        new_member = {"user_id": user_id, "email": email, "name": name, "role": "viewer", "joined_at": datetime.now(timezone.utc).isoformat()}
+        teams.update_one({"_id": team["_id"]}, {"$push": {"members": new_member}})
+    team_invites.update_one({"_id": invite["_id"]}, {"$set": {"status": "accepted"}})
+    return {"team_id": str(team["_id"]), "team_name": team.get("name", "")}
+
+
+def remove_team_member(team_id: str, owner_id: str, member_user_id: str) -> dict:
+    try:
+        obj_id = ObjectId(team_id)
+    except (bson_errors.InvalidId, TypeError):
+        return {"error": "Invalid team ID."}
+    team = teams.find_one({"_id": obj_id})
+    if not team:
+        return {"error": "Team not found."}
+    if team.get("owner_id") != owner_id:
+        return {"error": "Only the team owner can remove members."}
+    if member_user_id == owner_id:
+        return {"error": "The owner cannot remove themselves. Delete the team instead."}
+    members = team.get("members", [])
+    new_members = [m for m in members if m.get("user_id") != member_user_id]
+    if len(new_members) == len(members):
+        return {"error": "That person is not a member of this team."}
+    teams.update_one({"_id": obj_id}, {"$set": {"members": new_members}})
+    return {"success": True}
 
 
 def add_team_analysis(team_id: str, report_type: str, report_id: str, title: str, added_by: str) -> str:
