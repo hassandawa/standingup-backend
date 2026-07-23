@@ -65,12 +65,14 @@ def delete_saved_idea_analysis(analysis_id: str, user_id: str | None = None) -> 
     return result.deleted_count > 0
 
 
-def save_shared_analysis(analysis: dict, idea_form: dict) -> str:
+def save_shared_analysis(analysis: dict, idea_form: dict, team_id: str, created_by: str) -> str:
     token = secrets.token_urlsafe(16)
     doc = {
         "token": token,
         "analysis": analysis,
         "idea_form": idea_form,
+        "team_id": team_id,
+        "created_by": created_by,
         "created_at": datetime.now(timezone.utc),
     }
     from app.database import shared_analyses
@@ -86,6 +88,16 @@ def get_shared_analysis(token: str) -> dict | None:
         doc["created_at"] = doc["created_at"].isoformat()
         return doc
     return None
+
+
+def is_team_member(team_id: str, user_id: str) -> bool:
+    if not team_id or not user_id:
+        return False
+    try:
+        obj_id = ObjectId(team_id)
+    except (bson_errors.InvalidId, TypeError):
+        return False
+    return teams.find_one({"_id": obj_id, "members.user_id": user_id}) is not None
 
 
 def save_build_progress(token: str, day: int, completed_tasks: list[str], notes: str = "") -> dict:
@@ -159,11 +171,10 @@ def delete_startup_plan(plan_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_customer_strategy(strategy: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_customer_strategy(strategy: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "strategy": strategy,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -177,11 +188,10 @@ def get_customer_strategies(user_id: str | None = None) -> list:
     return [serialize_doc(d) for d in docs]
 
 
-def save_decision_report(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_decision_report(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -208,11 +218,10 @@ def delete_decision_report(report_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_business_plan(plan: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_business_plan(plan: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "plan": plan,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -239,11 +248,10 @@ def delete_business_plan(plan_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_customer_insights(insights: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_customer_insights(insights: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "insights": insights,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -283,11 +291,10 @@ def delete_customer_strategy(strategy_id: str, user_id: str | None = None) -> bo
     return result.deleted_count > 0
 
 
-def save_market_intelligence(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_market_intelligence(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -346,11 +353,10 @@ def delete_ai_cofounder_chat(chat_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_investor_tools(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_investor_tools(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -377,11 +383,10 @@ def delete_investor_tools(report_id: str, user_id: str | None = None) -> bool:
     return result.deleted_count > 0
 
 
-def save_marketing_hub(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_marketing_hub(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -410,11 +415,10 @@ def delete_marketing_hub(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Development Hub ──────────────────────────────────────────────────────────
 
-def save_development_hub(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_development_hub(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -442,11 +446,10 @@ def delete_development_hub(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Growth Hub ───────────────────────────────────────────────────────────────
 
-def save_growth_hub(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_growth_hub(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -474,11 +477,10 @@ def delete_growth_hub(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Financial Planning Hub ───────────────────────────────────────────────────
 
-def save_financial_plan(report: dict, idea_context: dict, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_financial_plan(report: dict, idea_context: dict, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "idea_context": idea_context,
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -506,12 +508,11 @@ def delete_financial_plan(report_id: str, user_id: str | None = None) -> bool:
 
 # ─── Launch Hub ───────────────────────────────────────────────────────────────
 
-def save_launch_hub(report: dict, checked_items: list[str] | None = None, idea_context: dict | None = None, idea_id: str | None = None, user_id: str | None = None) -> str:
+def save_launch_hub(report: dict, checked_items: list[str] | None = None, idea_context: dict | None = None, user_id: str | None = None) -> str:
     doc = {
         "report": report,
         "checked_items": checked_items or [],
         "idea_context": idea_context or {},
-        "idea_id": idea_id,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -587,10 +588,6 @@ def get_team_by_invite_code(code: str) -> dict | None:
     return None
 
 
-# Team plan member cap (owner + invited members). Adjust here if pricing changes.
-TEAM_MEMBER_LIMIT = 5
-
-
 def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | None:
     team = teams.find_one({"invite_code": invite_code})
     if not team:
@@ -598,8 +595,6 @@ def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | N
     already_member = any(m.get("user_id") == user_id for m in team.get("members", []))
     if already_member:
         return {"_id": str(team["_id"]), "already_member": True}
-    if len(team.get("members", [])) >= TEAM_MEMBER_LIMIT:
-        return {"_id": str(team["_id"]), "limit_reached": True}
     new_member = {"user_id": user_id, "email": email, "name": name, "role": "viewer", "joined_at": datetime.now(timezone.utc).isoformat()}
     teams.update_one({"_id": team["_id"]}, {"$push": {"members": new_member}})
     team["members"].append(new_member)
@@ -607,76 +602,6 @@ def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | N
     team["id"] = str(team["_id"])
     team["created_at"] = team["created_at"].isoformat() if hasattr(team["created_at"], "isoformat") else str(team["created_at"])
     return team
-
-
-def create_team_invite(team_id: str, email: str, invited_by: str) -> dict:
-    token = secrets.token_urlsafe(24)
-    doc = {
-        "team_id": team_id,
-        "email": email.strip().lower(),
-        "token": token,
-        "status": "pending",
-        "invited_by": invited_by,
-        "created_at": datetime.now(timezone.utc),
-    }
-    team_invites.insert_one(doc)
-    return doc
-
-
-def get_pending_invites(team_id: str) -> list:
-    docs = list(team_invites.find({"team_id": team_id, "status": "pending"}).sort("created_at", -1))
-    for d in docs:
-        d["_id"] = str(d["_id"])
-        d["created_at"] = d["created_at"].isoformat() if hasattr(d["created_at"], "isoformat") else str(d["created_at"])
-    return docs
-
-
-def revoke_team_invite(team_id: str, invite_id: str) -> bool:
-    try:
-        obj_id = ObjectId(invite_id)
-    except (bson_errors.InvalidId, TypeError):
-        return False
-    result = team_invites.delete_one({"_id": obj_id, "team_id": team_id})
-    return result.deleted_count > 0
-
-
-def accept_team_invite(token: str, user_id: str, email: str, name: str) -> dict:
-    invite = team_invites.find_one({"token": token, "status": "pending"})
-    if not invite:
-        return {"error": "Invite not found or already used."}
-    if invite["email"] != email.strip().lower():
-        return {"error": "This invite was sent to a different email address."}
-    team = teams.find_one({"_id": ObjectId(invite["team_id"])})
-    if not team:
-        return {"error": "Team no longer exists."}
-    already_member = any(m.get("user_id") == user_id for m in team.get("members", []))
-    if not already_member:
-        if len(team.get("members", [])) >= TEAM_MEMBER_LIMIT:
-            return {"error": f"This team has reached its {TEAM_MEMBER_LIMIT}-member limit."}
-        new_member = {"user_id": user_id, "email": email, "name": name, "role": "viewer", "joined_at": datetime.now(timezone.utc).isoformat()}
-        teams.update_one({"_id": team["_id"]}, {"$push": {"members": new_member}})
-    team_invites.update_one({"_id": invite["_id"]}, {"$set": {"status": "accepted"}})
-    return {"team_id": str(team["_id"]), "team_name": team.get("name", "")}
-
-
-def remove_team_member(team_id: str, owner_id: str, member_user_id: str) -> dict:
-    try:
-        obj_id = ObjectId(team_id)
-    except (bson_errors.InvalidId, TypeError):
-        return {"error": "Invalid team ID."}
-    team = teams.find_one({"_id": obj_id})
-    if not team:
-        return {"error": "Team not found."}
-    if team.get("owner_id") != owner_id:
-        return {"error": "Only the team owner can remove members."}
-    if member_user_id == owner_id:
-        return {"error": "The owner cannot remove themselves. Delete the team instead."}
-    members = team.get("members", [])
-    new_members = [m for m in members if m.get("user_id") != member_user_id]
-    if len(new_members) == len(members):
-        return {"error": "That person is not a member of this team."}
-    teams.update_one({"_id": obj_id}, {"$set": {"members": new_members}})
-    return {"success": True}
 
 
 def add_team_analysis(team_id: str, report_type: str, report_id: str, title: str, added_by: str) -> str:
@@ -807,36 +732,10 @@ def update_saved_idea_hub_reports(idea_id: str, user_id: str, hub_key: str, repo
     return result.modified_count > 0
 
 
-# Collections that can hold analyses/reports linked to a specific saved
-# idea via an "idea_id" field, populated when that report was generated
-# while a saved idea was selected. Swept on delete_saved_idea so removing
-# an idea also removes its analysis history, not just the idea itself.
-_IDEA_LINKED_COLLECTIONS = [
-    customer_strategies,
-    decision_reports,
-    business_plans,
-    customer_insights,
-    market_intelligence,
-    investor_tools,
-    marketing_hub,
-    development_hubs,
-    growth_hubs,
-    financial_plans,
-    launch_hubs,
-]
-
-
 def delete_saved_idea(idea_id: str, user_id: str) -> bool:
     try:
         obj_id = ObjectId(idea_id)
     except (bson_errors.InvalidId, TypeError):
         return False
     result = saved_ideas.delete_one({"_id": obj_id, "user_id": user_id})
-    deleted = result.deleted_count > 0
-    if deleted:
-        for collection in _IDEA_LINKED_COLLECTIONS:
-            try:
-                collection.delete_many({"idea_id": idea_id, "user_id": user_id})
-            except Exception as e:
-                logger.warning("Cascade delete failed for %s on idea %s: %s", collection.name, idea_id, e)
-    return deleted
+    return result.deleted_count > 0

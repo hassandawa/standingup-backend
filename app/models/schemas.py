@@ -50,13 +50,6 @@ class ForgotPasswordRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=254)
 
 
-class ContactRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    email: str = Field(..., min_length=3, max_length=254)
-    subject: str = Field(default="", max_length=150)
-    message: str = Field(..., min_length=1, max_length=5000)
-
-
 class UserResponse(BaseModel):
     id: str
     name: str
@@ -216,6 +209,7 @@ class IdeaChatResponse(BaseModel):
 class ShareLinkRequest(BaseModel):
     analysis: dict
     idea_form: dict = {}
+    team_id: str
 
 
 class ShareLinkResponse(BaseModel):
@@ -1414,15 +1408,6 @@ class TeamAddAnalysisRequest(BaseModel):
     report_type: str = ""
     report_id: str = ""
     title: str = ""
-
-
-class TeamAcceptInviteRequest(BaseModel):
-    token: str = ""
-
-
-class TeamRemoveMemberRequest(BaseModel):
-    team_id: str = ""
-    member_user_id: str = ""
 
 
 class CommentCreateRequest(BaseModel):
