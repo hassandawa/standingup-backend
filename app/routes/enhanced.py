@@ -90,7 +90,7 @@ from app.services.ai_service import (
 )
 from app.services.ai_errors import AIServiceError, AIRateLimitError
 from app.services.auth_service import get_user_by_token, get_user_by_id
-from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, create_comment, get_comments, delete_comment
+from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, invite_team_member, remove_team_member, create_comment, get_comments, delete_comment
 from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
@@ -1419,12 +1419,55 @@ async def join_team_endpoint(body: TeamJoinRequest, user_id: str = Depends(_requ
         result = join_team(body.invite_code, user_id, email, name)
         if not result:
             raise HTTPException(status_code=404, detail="Invalid invite code.")
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
         return result
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Join team failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to join team.")
+
+
+@router.post("/api/teams/{team_id}/invite")
+async def invite_team_member_endpoint(team_id: str, body: TeamInviteRequest, user_id: str = Depends(_require_user_id)):
+    try:
+        result = invite_team_member(team_id, body.email, user_id)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        join_url = f"{FRONTEND_URL.rstrip('/')}/collaboration?invite={result['invite_code']}"
+        html_body = f"""
+            <p>You've been invited to join the team <strong>{result['team_name']}</strong> on startingUP.</p>
+            <p><a href="{join_url}">Click here to join</a>, or use invite code: <strong>{result['invite_code']}</strong></p>
+        """
+        try:
+            sent, reason = await send_email(result["email"], f"You've been invited to join {result['team_name']}", html_body)
+            if not sent:
+                logger.warning("Team invite email not sent: %s", reason)
+        except Exception as exc:
+            logger.error("Team invite email failed: %s", exc, exc_info=True)
+
+        return {"message": f"Invite sent to {result['email']}."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Invite team member failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to send invite.")
+
+
+@router.delete("/api/teams/{team_id}/members/{member_user_id}")
+async def remove_team_member_endpoint(team_id: str, member_user_id: str, user_id: str = Depends(_require_user_id)):
+    try:
+        removed = remove_team_member(team_id, member_user_id, user_id)
+        if not removed:
+            raise HTTPException(status_code=403, detail="Only the team owner can remove members.")
+        return {"message": "Member removed."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Remove team member failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to remove member.")
 
 
 @router.post("/api/teams/analysis")

@@ -583,6 +583,8 @@ def join_team(invite_code: str, user_id: str, email: str, name: str) -> dict | N
     already_member = any(m.get("user_id") == user_id for m in team.get("members", []))
     if already_member:
         return {"_id": str(team["_id"]), "already_member": True}
+    if len(team.get("members", [])) >= MAX_TEAM_MEMBERS:
+        return {"error": f"Team is full (max {MAX_TEAM_MEMBERS} members)."}
     new_member = {"user_id": user_id, "email": email, "name": name, "role": "viewer", "joined_at": datetime.now(timezone.utc).isoformat()}
     teams.update_one({"_id": team["_id"]}, {"$push": {"members": new_member}})
     team["members"].append(new_member)
@@ -612,6 +614,72 @@ def add_team_analysis(team_id: str, report_type: str, report_id: str, title: str
 def get_team_analyses(team_id: str) -> list:
     docs = list(team_analyses.find({"team_id": team_id}).sort("created_at", -1))
     return [serialize_doc(d) for d in docs]
+
+
+MAX_TEAM_MEMBERS = 5
+
+
+def invite_team_member(team_id: str, email: str, invited_by: str) -> dict:
+    """Invite someone to a team by email. Requires the inviter to already be
+    a member. Enforces MAX_TEAM_MEMBERS. Returns a dict with the team's
+    invite_code (used to build the email + join link) or an 'error' key."""
+    try:
+        obj_id = ObjectId(team_id)
+    except (bson_errors.InvalidId, TypeError):
+        return {"error": "Team not found."}
+
+    team = teams.find_one({"_id": obj_id})
+    if not team:
+        return {"error": "Team not found."}
+
+    if not any(m.get("user_id") == invited_by for m in team.get("members", [])):
+        return {"error": "You must be a member of this team to invite others."}
+
+    clean_email = email.strip().lower()
+    if any(m.get("email", "").lower() == clean_email for m in team.get("members", [])):
+        return {"error": "This person is already a member of the team."}
+
+    if len(team.get("members", [])) >= MAX_TEAM_MEMBERS:
+        return {"error": f"Team is full (max {MAX_TEAM_MEMBERS} members)."}
+
+    team_invites.insert_one({
+        "team_id": team_id,
+        "email": clean_email,
+        "invite_code": team.get("invite_code", ""),
+        "invited_by": invited_by,
+        "created_at": datetime.now(timezone.utc),
+    })
+
+    return {
+        "email": clean_email,
+        "invite_code": team.get("invite_code", ""),
+        "team_name": team.get("name", ""),
+    }
+
+
+def remove_team_member(team_id: str, member_user_id: str, requested_by: str) -> bool:
+    """Remove a member from a team. Only the team owner can remove members,
+    and the owner cannot remove themselves this way."""
+    try:
+        obj_id = ObjectId(team_id)
+    except (bson_errors.InvalidId, TypeError):
+        return False
+
+    team = teams.find_one({"_id": obj_id})
+    if not team:
+        return False
+
+    if team.get("owner_id") != requested_by:
+        return False
+
+    if member_user_id == team.get("owner_id"):
+        return False
+
+    result = teams.update_one(
+        {"_id": obj_id},
+        {"$pull": {"members": {"user_id": member_user_id}}},
+    )
+    return result.modified_count > 0
 
 
 # ─── Comments ─────────────────────────────────────────────────────────────────
