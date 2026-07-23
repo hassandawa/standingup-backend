@@ -74,6 +74,7 @@ def create_user(name: str, email: str, password: str) -> dict:
         "ideas_generated_count": 0,
         "flutterwave_subscription_id": None,
         "subscription_status": None,
+        "plan_expires_at": None,
         "created_at": now,
         "updated_at": now,
     }
@@ -222,7 +223,9 @@ def set_subscription_id(user_id: str, subscription_id: str) -> None:
 
 def update_subscription_status(user_id: str, plan: str, status: str, subscription_id: str | None = None) -> None:
     """Called by the Flutterwave webhook handler (or the redirect-back
-    verification step) to sync a user's plan/status."""
+    verification step) to sync a user's plan/status. Also tracks a
+    plan_expires_at timestamp (30 days out on each successful activation,
+    since all plans are monthly) so admins can see who's about to lapse."""
     try:
         updates = {
             "plan": plan,
@@ -231,21 +234,31 @@ def update_subscription_status(user_id: str, plan: str, status: str, subscriptio
         }
         if subscription_id is not None:
             updates["flutterwave_subscription_id"] = subscription_id
+        if status == "active" and plan != "free":
+            updates["plan_expires_at"] = datetime.now(timezone.utc) + timedelta(days=30)
+        elif plan == "free" or status == "cancelled":
+            updates["plan_expires_at"] = None
         users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
     except Exception:
         pass
-def admin_set_plan(user_id: str, plan: str, days: int | None = None) -> None:
-    """Called by the admin dashboard to manually grant/change a user's
-    plan, optionally with an expiry `days` from now (None means no
-    expiry, e.g. for permanently comped accounts)."""
+
+
+def admin_set_plan(user_id: str, plan: str, days: int | None) -> None:
+    """Manually set a user's plan from the admin dashboard. Unlike the
+    webhook-driven update_subscription_status, this lets an admin choose a
+    custom expiry window (or none at all, for a permanent grant) — useful
+    for onboarding someone who paid outside the automated flow."""
     updates = {
         "plan": plan,
+        "subscription_status": "active" if plan != "free" else None,
         "updated_at": datetime.now(timezone.utc),
     }
-    if days is not None:
+    if plan == "free":
+        updates["plan_expires_at"] = None
+    elif days is not None:
         updates["plan_expires_at"] = datetime.now(timezone.utc) + timedelta(days=days)
     else:
-        updates["plan_expires_at"] = None
+        updates["plan_expires_at"] = None  # no expiry = permanent grant
     users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
 
 

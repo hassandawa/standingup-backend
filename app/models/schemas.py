@@ -53,7 +53,7 @@ class ForgotPasswordRequest(BaseModel):
 class ContactRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     email: str = Field(..., min_length=3, max_length=254)
-    subject: str = Field("", max_length=200)
+    subject: str = Field(default="", max_length=150)
     message: str = Field(..., min_length=1, max_length=5000)
 
 
@@ -1414,6 +1414,15 @@ class TeamAddAnalysisRequest(BaseModel):
     report_type: str = ""
     report_id: str = ""
     title: str = ""
+
+
+class TeamAcceptInviteRequest(BaseModel):
+    token: str = ""
+
+
+class TeamRemoveMemberRequest(BaseModel):
+    team_id: str = ""
+    member_user_id: str = ""
 
 
 class CommentCreateRequest(BaseModel):

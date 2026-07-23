@@ -50,7 +50,13 @@ async def send_via_mailjet(recipient: str, subject: str, html_body: str) -> tupl
             body = json.loads(resp.read().decode())
             messages = body.get("Messages", [])
             if messages and messages[0].get("Status") == "success":
-                logger.info("Email sent to %s via Mailjet", recipient)
+                msg_info = (messages[0].get("To") or [{}])[0]
+                message_id = msg_info.get("MessageID", "unknown")
+                message_uuid = msg_info.get("MessageUUID", "unknown")
+                logger.info(
+                    "Email sent to %s via Mailjet (MessageID=%s, MessageUUID=%s)",
+                    recipient, message_id, message_uuid,
+                )
                 return True, "ok"
             errors = messages[0].get("Errors", [{"ErrorMessage": "unknown"}]) if messages else [{"ErrorMessage": "empty response"}]
             err_msg = "; ".join(e.get("ErrorMessage", str(e)) for e in errors)

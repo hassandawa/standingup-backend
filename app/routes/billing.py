@@ -54,7 +54,11 @@ def start_checkout(body: dict, authorization: str = Header(default="")):
         )
         return {"url": url}
     except FlutterwaveNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        logger.error("Checkout attempted while Flutterwave is not configured: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Online payments aren't available just yet. Send us a quick message below and we'll set you up manually.",
+        )
     except Exception as exc:
         logger.error("Failed to create Flutterwave checkout: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to start checkout. Please try again.")
@@ -101,12 +105,22 @@ def cancel(authorization: str = Header(default="")):
     from bson import ObjectId
     raw_user = users.find_one({"_id": ObjectId(user["id"])})
     sub_id = raw_user.get("flutterwave_subscription_id") if raw_user else None
+
     if not sub_id:
-        raise HTTPException(status_code=400, detail="No active subscription found to cancel.")
+        # No real Flutterwave subscription behind this plan (e.g. it was
+        # granted manually from the admin dashboard) — just downgrade
+        # locally rather than erroring out.
+        update_subscription_status(user["id"], "free", "cancelled")
+        return {"plan": "free", "status": "cancelled"}
+
     try:
         ok = cancel_subscription(sub_id)
-    except FlutterwaveNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+    except FlutterwaveNotConfigured:
+        # Payments aren't live yet, so there's nothing to actually cancel
+        # on Flutterwave's side either — still let the user downgrade.
+        update_subscription_status(user["id"], "free", "cancelled")
+        return {"plan": "free", "status": "cancelled"}
+
     if not ok:
         raise HTTPException(status_code=500, detail="Failed to cancel subscription. Please try again or contact support.")
     update_subscription_status(user["id"], "free", "cancelled")

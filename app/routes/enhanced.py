@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from app.config import FRONTEND_URL
+from bson import ObjectId
 from app.models.schemas import (
     EvaluationRequest,
     CofounderRequest,
@@ -53,6 +54,8 @@ from app.models.schemas import (
     TeamInviteRequest,
     TeamJoinRequest,
     TeamAddAnalysisRequest,
+    TeamAcceptInviteRequest,
+    TeamRemoveMemberRequest,
     CommentCreateRequest,
     CommentResponse,
     ExportRequest,
@@ -90,7 +93,7 @@ from app.services.ai_service import (
 )
 from app.services.ai_errors import AIServiceError, AIRateLimitError
 from app.services.auth_service import get_user_by_token, get_user_by_id
-from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, invite_team_member, remove_team_member, create_comment, get_comments, delete_comment
+from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_idea_analysis_by_idea_id, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, create_comment, get_comments, delete_comment, create_team_invite, get_pending_invites, revoke_team_invite, accept_team_invite, remove_team_member, TEAM_MEMBER_LIMIT
 from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
@@ -612,9 +615,10 @@ async def save_customer_strategy(body: dict, user_id: str = Depends(_require_use
         track_event("save_customer_strategy", {"user_id": user_id})
         strategy = body.get("strategy", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not strategy:
             raise HTTPException(status_code=400, detail="Strategy data is required.")
-        strategy_id = db_save_customer_strategy(strategy, idea_context, user_id=user_id)
+        strategy_id = db_save_customer_strategy(strategy, idea_context, idea_id=idea_id, user_id=user_id)
         return {"strategy_id": strategy_id, "message": "Customer strategy saved successfully."}
     except HTTPException:
         raise
@@ -654,9 +658,10 @@ async def save_decision_report(body: dict, user_id: str = Depends(_require_user_
         track_event("save_decision_report", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = db_save_decision_report(report, idea_context, user_id=user_id)
+        report_id = db_save_decision_report(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Decision report saved successfully."}
     except HTTPException:
         raise
@@ -696,9 +701,10 @@ async def save_business_plan_endpoint(body: dict, user_id: str = Depends(_requir
         track_event("save_business_plan", {"user_id": user_id})
         plan = body.get("plan", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not plan:
             raise HTTPException(status_code=400, detail="Plan data is required.")
-        plan_id = save_business_plan(plan, idea_context, user_id=user_id)
+        plan_id = save_business_plan(plan, idea_context, idea_id=idea_id, user_id=user_id)
         return {"plan_id": plan_id, "message": "Business plan saved successfully."}
     except HTTPException:
         raise
@@ -737,9 +743,10 @@ async def save_customer_insights_endpoint(body: dict, user_id: str = Depends(_re
         track_event("save_customer_insights", {"user_id": user_id})
         insights = body.get("insights", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not insights:
             raise HTTPException(status_code=400, detail="Insights data is required.")
-        insights_id = save_customer_insights(insights, idea_context, user_id=user_id)
+        insights_id = save_customer_insights(insights, idea_context, idea_id=idea_id, user_id=user_id)
         return {"insights_id": insights_id, "message": "Customer insights saved successfully."}
     except HTTPException:
         raise
@@ -804,9 +811,10 @@ async def save_market_intelligence_endpoint(body: dict, user_id: str = Depends(_
         track_event("save_market_intelligence", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_market_intelligence(report, idea_context, user_id=user_id)
+        report_id = save_market_intelligence(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Market intelligence report saved successfully."}
     except HTTPException:
         raise
@@ -932,9 +940,10 @@ async def save_investor_tools_endpoint(body: dict, user_id: str = Depends(_requi
         track_event("save_investor_tools", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_investor_tools(report, idea_context, user_id=user_id)
+        report_id = save_investor_tools(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Investor tools saved successfully."}
     except HTTPException:
         raise
@@ -999,9 +1008,10 @@ async def save_marketing_hub_endpoint(body: dict, user_id: str = Depends(_requir
         track_event("save_marketing_hub", {"user_id": user_id})
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_marketing_hub(report, idea_context, user_id=user_id)
+        report_id = save_marketing_hub(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Marketing assets saved successfully."}
     except HTTPException:
         raise
@@ -1065,9 +1075,10 @@ async def save_development_hub_endpoint(
     try:
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_development_hub(report, idea_context, user_id=user_id)
+        report_id = save_development_hub(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Development hub saved to dashboard."}
     except HTTPException:
         raise
@@ -1131,9 +1142,10 @@ async def save_growth_hub_endpoint(
     try:
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_growth_hub(report, idea_context, user_id=user_id)
+        report_id = save_growth_hub(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Growth hub saved to dashboard."}
     except HTTPException:
         raise
@@ -1197,9 +1209,10 @@ async def save_financial_plan_endpoint(
     try:
         report = body.get("report", {})
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_financial_plan(report, idea_context, user_id=user_id)
+        report_id = save_financial_plan(report, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Financial plan saved to dashboard."}
     except HTTPException:
         raise
@@ -1241,15 +1254,30 @@ async def save_idea_analysis_progress(
         track_event("save_analysis", {"user_id": user_id})
         analysis = body.get("analysis", {})
         idea_form = body.get("idea_form", {})
+        idea_id = body.get("idea_id")
         if not analysis:
             raise HTTPException(status_code=400, detail="Analysis data is required.")
-        analysis_id = save_idea_analysis(analysis, idea_form, user_id=user_id)
+        analysis_id = save_idea_analysis(analysis, idea_form, user_id=user_id, idea_id=idea_id)
         return {"analysis_id": analysis_id, "message": "Progress saved successfully."}
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Save idea analysis failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save analysis.")
+
+
+@router.get("/api/startups/analyze-idea/by-idea/{idea_id}")
+async def get_idea_analysis_for_idea(idea_id: str, user_id: str = Depends(_require_user_id)):
+    try:
+        result = get_idea_analysis_by_idea_id(idea_id, user_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="No idea analysis found for this idea. Run 'Analyze My Idea' first.")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Fetch idea analysis failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch analysis.")
 
 
 @router.get("/api/startups/analyze-idea/saved")
@@ -1322,9 +1350,10 @@ async def save_launch_hub_endpoint(body: dict, user_id: str = Depends(_require_u
         report = body.get("report", {})
         checked_items = body.get("checked_items", [])
         idea_context = body.get("idea_context", {})
+        idea_id = body.get("idea_id")
         if not report:
             raise HTTPException(status_code=400, detail="Report data is required.")
-        report_id = save_launch_hub(report, checked_items, idea_context, user_id=user_id)
+        report_id = save_launch_hub(report, checked_items, idea_context, idea_id=idea_id, user_id=user_id)
         return {"report_id": report_id, "message": "Launch hub saved to dashboard."}
     except HTTPException:
         raise
@@ -1378,10 +1407,17 @@ async def remove_launch_hub(report_id: str, user_id: str = Depends(_require_user
 async def create_team_endpoint(body: TeamCreateRequest, user_id: str = Depends(_require_user_id)):
     try:
         user = get_user_by_id(user_id)
+        if not user or user.get("plan") != "team":
+            raise HTTPException(
+                status_code=402,
+                detail="Creating a team requires the Team plan. Upgrade to invite collaborators.",
+            )
         email = user.get("email", "") if user else ""
         name = user.get("name", "") if user else ""
         team = create_team(body.name, body.description, user_id, email, name)
         return team
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Create team failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create team.")
@@ -1419,8 +1455,8 @@ async def join_team_endpoint(body: TeamJoinRequest, user_id: str = Depends(_requ
         result = join_team(body.invite_code, user_id, email, name)
         if not result:
             raise HTTPException(status_code=404, detail="Invalid invite code.")
-        if "error" in result:
-            raise HTTPException(status_code=400, detail=result["error"])
+        if result.get("limit_reached"):
+            raise HTTPException(status_code=400, detail=f"This team has reached its {TEAM_MEMBER_LIMIT}-member limit.")
         return result
     except HTTPException:
         raise
@@ -1429,26 +1465,33 @@ async def join_team_endpoint(body: TeamJoinRequest, user_id: str = Depends(_requ
         raise HTTPException(status_code=500, detail="Failed to join team.")
 
 
-@router.post("/api/teams/{team_id}/invite")
-async def invite_team_member_endpoint(team_id: str, body: TeamInviteRequest, user_id: str = Depends(_require_user_id)):
+@router.post("/api/teams/invite")
+async def invite_team_member(body: TeamInviteRequest, user_id: str = Depends(_require_user_id)):
     try:
-        result = invite_team_member(team_id, body.email, user_id)
-        if "error" in result:
-            raise HTTPException(status_code=400, detail=result["error"])
+        from app.database import teams as teams_col
+        team = teams_col.find_one({"_id": ObjectId(body.team_id)})
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found.")
+        if team.get("owner_id") != user_id:
+            raise HTTPException(status_code=403, detail="Only the team owner can invite members.")
+        if len(team.get("members", [])) >= TEAM_MEMBER_LIMIT:
+            raise HTTPException(status_code=400, detail=f"This team has reached its {TEAM_MEMBER_LIMIT}-member limit.")
+        if not body.email or "@" not in body.email:
+            raise HTTPException(status_code=400, detail="A valid email is required.")
 
-        join_url = f"{FRONTEND_URL.rstrip('/')}/collaboration?invite={result['invite_code']}"
+        invite = create_team_invite(body.team_id, body.email, user_id)
+        accept_url = f"{FRONTEND_URL.rstrip('/')}/collaboration?accept_invite={invite['token']}"
+        owner = get_user_by_id(user_id)
+        owner_name = owner.get("name", "Someone") if owner else "Someone"
         html_body = f"""
-            <p>You've been invited to join the team <strong>{result['team_name']}</strong> on startingUP.</p>
-            <p><a href="{join_url}">Click here to join</a>, or use invite code: <strong>{result['invite_code']}</strong></p>
+            <p>{owner_name} invited you to join the team "<strong>{team.get('name', '')}</strong>" on startingUP.</p>
+            <p><a href="{accept_url}">Click here to accept the invite</a></p>
+            <p>If you weren't expecting this, you can safely ignore this email.</p>
         """
-        try:
-            sent, reason = await send_email(result["email"], f"You've been invited to join {result['team_name']}", html_body)
-            if not sent:
-                logger.warning("Team invite email not sent: %s", reason)
-        except Exception as exc:
-            logger.error("Team invite email failed: %s", exc, exc_info=True)
-
-        return {"message": f"Invite sent to {result['email']}."}
+        sent, reason = await send_email(body.email, f"{owner_name} invited you to a team on startingUP", html_body)
+        if not sent:
+            logger.warning("Team invite email not sent to %s: %s", body.email, reason)
+        return {"message": f"Invite sent to {body.email}.", "email_sent": sent}
     except HTTPException:
         raise
     except Exception as e:
@@ -1456,12 +1499,62 @@ async def invite_team_member_endpoint(team_id: str, body: TeamInviteRequest, use
         raise HTTPException(status_code=500, detail="Failed to send invite.")
 
 
-@router.delete("/api/teams/{team_id}/members/{member_user_id}")
-async def remove_team_member_endpoint(team_id: str, member_user_id: str, user_id: str = Depends(_require_user_id)):
+@router.get("/api/teams/{team_id}/invites")
+async def list_pending_invites(team_id: str, user_id: str = Depends(_require_user_id)):
     try:
-        removed = remove_team_member(team_id, member_user_id, user_id)
-        if not removed:
-            raise HTTPException(status_code=403, detail="Only the team owner can remove members.")
+        from app.database import teams as teams_col
+        team = teams_col.find_one({"_id": ObjectId(team_id)})
+        if not team or team.get("owner_id") != user_id:
+            raise HTTPException(status_code=403, detail="Only the team owner can view invites.")
+        return {"invites": get_pending_invites(team_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("List invites failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch invites.")
+
+
+@router.post("/api/teams/{team_id}/invites/{invite_id}/revoke")
+async def revoke_invite_endpoint(team_id: str, invite_id: str, user_id: str = Depends(_require_user_id)):
+    try:
+        from app.database import teams as teams_col
+        team = teams_col.find_one({"_id": ObjectId(team_id)})
+        if not team or team.get("owner_id") != user_id:
+            raise HTTPException(status_code=403, detail="Only the team owner can revoke invites.")
+        ok = revoke_team_invite(team_id, invite_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Invite not found.")
+        return {"message": "Invite revoked."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Revoke invite failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to revoke invite.")
+
+
+@router.post("/api/teams/accept-invite")
+async def accept_invite_endpoint(body: TeamAcceptInviteRequest, user_id: str = Depends(_require_user_id)):
+    try:
+        user = get_user_by_id(user_id)
+        email = user.get("email", "") if user else ""
+        name = user.get("name", "") if user else ""
+        result = accept_team_invite(body.token, user_id, email, name)
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Accept invite failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to accept invite.")
+
+
+@router.post("/api/teams/remove-member")
+async def remove_member_endpoint(body: TeamRemoveMemberRequest, user_id: str = Depends(_require_user_id)):
+    try:
+        result = remove_team_member(body.team_id, user_id, body.member_user_id)
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
         return {"message": "Member removed."}
     except HTTPException:
         raise
