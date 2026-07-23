@@ -90,27 +90,12 @@ from app.services.ai_service import (
 )
 from app.services.ai_errors import AIServiceError, AIRateLimitError
 from app.services.auth_service import get_user_by_token, get_user_by_id
-from app.services.database_service import save_shared_analysis, get_shared_analysis, is_team_member, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, create_comment, get_comments, delete_comment
+from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, create_comment, get_comments, delete_comment
 from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def _optional_user_id(authorization: str = Header(default="")) -> str | None:
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token:
-        return None
-    user = get_user_by_token(token)
-    return user["id"] if user else None
-
-
-def _require_user_id(authorization: str = Header(default="")) -> str:
-    user_id = _optional_user_id(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Sign in required.")
-    return user_id
 
 
 def _normalize_string_list(val):
@@ -445,11 +430,9 @@ async def generate_customer_insights_report(request: CustomerInsightsRequest):
 
 
 @router.post("/api/startups/analyze-idea/share", response_model=ShareLinkResponse)
-async def share_idea_analysis(request: ShareLinkRequest, user_id: str = Depends(_require_user_id)):
-    if not is_team_member(request.team_id, user_id):
-        raise HTTPException(status_code=403, detail="You must be a member of the team you're sharing to.")
+async def share_idea_analysis(request: ShareLinkRequest):
     try:
-        token = save_shared_analysis(request.analysis, request.idea_form, request.team_id, user_id)
+        token = save_shared_analysis(request.analysis, request.idea_form)
         share_url = f"{FRONTEND_URL.rstrip('/')}/share/{token}"
         return ShareLinkResponse(token=token, url=share_url)
     except Exception as e:
@@ -458,12 +441,10 @@ async def share_idea_analysis(request: ShareLinkRequest, user_id: str = Depends(
 
 
 @router.get("/api/share/{token}")
-async def get_shared_idea_analysis(token: str, user_id: str = Depends(_require_user_id)):
+async def get_shared_idea_analysis(token: str):
     doc = get_shared_analysis(token)
     if not doc:
         raise HTTPException(status_code=404, detail="Shared analysis not found.")
-    if not is_team_member(doc.get("team_id", ""), user_id):
-        raise HTTPException(status_code=403, detail="You must be a member of the team this was shared with to view it.")
     return {
         "analysis": doc.get("analysis"),
         "idea_form": doc.get("idea_form", {}),
@@ -608,6 +589,21 @@ async def email_startup_report(request: EmailReportRequest):
     if sent:
         return EmailReportResponse(sent=True, message=f"Report sent to {request.recipient_email}")
     return EmailReportResponse(sent=False, message=f"Email sending unavailable. {reason}")
+
+
+def _optional_user_id(authorization: str = Header(default="")) -> str | None:
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return None
+    user = get_user_by_token(token)
+    return user["id"] if user else None
+
+
+def _require_user_id(authorization: str = Header(default="")) -> str:
+    user_id = _optional_user_id(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Sign in required.")
+    return user_id
 
 
 @router.post("/api/startups/first-100-customers/save")

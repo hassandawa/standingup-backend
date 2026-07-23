@@ -65,14 +65,12 @@ def delete_saved_idea_analysis(analysis_id: str, user_id: str | None = None) -> 
     return result.deleted_count > 0
 
 
-def save_shared_analysis(analysis: dict, idea_form: dict, team_id: str, created_by: str) -> str:
+def save_shared_analysis(analysis: dict, idea_form: dict) -> str:
     token = secrets.token_urlsafe(16)
     doc = {
         "token": token,
         "analysis": analysis,
         "idea_form": idea_form,
-        "team_id": team_id,
-        "created_by": created_by,
         "created_at": datetime.now(timezone.utc),
     }
     from app.database import shared_analyses
@@ -88,16 +86,6 @@ def get_shared_analysis(token: str) -> dict | None:
         doc["created_at"] = doc["created_at"].isoformat()
         return doc
     return None
-
-
-def is_team_member(team_id: str, user_id: str) -> bool:
-    if not team_id or not user_id:
-        return False
-    try:
-        obj_id = ObjectId(team_id)
-    except (bson_errors.InvalidId, TypeError):
-        return False
-    return teams.find_one({"_id": obj_id, "members.user_id": user_id}) is not None
 
 
 def save_build_progress(token: str, day: int, completed_tasks: list[str], notes: str = "") -> dict:
