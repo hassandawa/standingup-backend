@@ -93,7 +93,7 @@ from app.services.ai_service import (
 )
 from app.services.ai_errors import AIServiceError, AIRateLimitError
 from app.services.auth_service import get_user_by_token, get_user_by_id
-from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, create_comment, get_comments, delete_comment, create_team_invite, get_pending_invites, revoke_team_invite, accept_team_invite, remove_team_member, TEAM_MEMBER_LIMIT
+from app.services.database_service import save_shared_analysis, get_shared_analysis, save_build_progress, get_build_progress, track_event, get_analytics_summary, save_idea_analysis, get_idea_analysis_by_idea_id, get_saved_idea_analyses, delete_saved_idea_analysis, save_customer_strategy as db_save_customer_strategy, get_customer_strategies, delete_customer_strategy, save_decision_report as db_save_decision_report, get_decision_reports, delete_decision_report, save_business_plan, get_business_plans, delete_business_plan, save_customer_insights, get_customer_insights_list, delete_customer_insights, save_market_intelligence, get_market_intelligence_list, delete_market_intelligence, save_ai_cofounder_chat, get_ai_cofounder_chats, delete_ai_cofounder_chat, save_investor_tools, get_investor_tools_list, delete_investor_tools, save_marketing_hub, get_marketing_hub_list, delete_marketing_hub, save_development_hub, get_development_hub_list, delete_development_hub, save_growth_hub, get_growth_hub_list, delete_growth_hub, save_financial_plan, get_financial_plan_list, delete_financial_plan, save_launch_hub, get_launch_hub_list, update_launch_hub_checks, delete_launch_hub, create_team, get_user_teams, get_team_by_invite_code, join_team, add_team_analysis, get_team_analyses, create_comment, get_comments, delete_comment, create_team_invite, get_pending_invites, revoke_team_invite, accept_team_invite, remove_team_member, TEAM_MEMBER_LIMIT
 from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
@@ -1254,15 +1254,30 @@ async def save_idea_analysis_progress(
         track_event("save_analysis", {"user_id": user_id})
         analysis = body.get("analysis", {})
         idea_form = body.get("idea_form", {})
+        idea_id = body.get("idea_id")
         if not analysis:
             raise HTTPException(status_code=400, detail="Analysis data is required.")
-        analysis_id = save_idea_analysis(analysis, idea_form, user_id=user_id)
+        analysis_id = save_idea_analysis(analysis, idea_form, user_id=user_id, idea_id=idea_id)
         return {"analysis_id": analysis_id, "message": "Progress saved successfully."}
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Save idea analysis failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save analysis.")
+
+
+@router.get("/api/startups/analyze-idea/by-idea/{idea_id}")
+async def get_idea_analysis_for_idea(idea_id: str, user_id: str = Depends(_require_user_id)):
+    try:
+        result = get_idea_analysis_by_idea_id(idea_id, user_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="No idea analysis found for this idea. Run 'Analyze My Idea' first.")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Fetch idea analysis failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch analysis.")
 
 
 @router.get("/api/startups/analyze-idea/saved")
