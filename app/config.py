@@ -18,6 +18,13 @@ FLUTTERWAVE_PLAN_ID_TEAM = os.getenv("FLUTTERWAVE_PLAN_ID_TEAM", "")
 FLUTTERWAVE_CURRENCY = os.getenv("FLUTTERWAVE_CURRENCY", "USD")
 PLAN_AMOUNTS = {"pro": 50, "team": 100}
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO", "")
+STRIPE_PRICE_ID_TEAM = os.getenv("STRIPE_PRICE_ID_TEAM", "")
+
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
